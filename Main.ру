@@ -1,0 +1,229 @@
+
+DAYS = [
+    "Понедельник",
+    "Вторник",
+    "Среда",
+    "Четверг",
+    "Пятница"
+]
+
+TIMES = [
+    "08:30–10:00",
+    "10:10–11:40",
+    "11:50–13:20",
+    "14:00–15:30",
+    "15:40–17:10"
+]
+
+
+def create_schedule(lessons, rooms):
+    schedule = []
+    unscheduled = []
+
+    for lesson in lessons:
+        placed = False
+
+        for day in DAYS:
+            if placed:
+                break
+
+            for time in TIMES:
+                if placed:
+                    break
+
+                for room in rooms:
+                    conflict = False
+
+                    for item in schedule:
+                        same_slot = (
+                            item["day"] == day
+                            and item["time"] == time
+                        )
+
+                        if same_slot and (
+                            item["room"] == room
+                            or item["teacher"].lower()
+                            == lesson["teacher"].lower()
+                            or item["group"].lower()
+                            == lesson["group"].lower()
+                        ):
+                            conflict = True
+                            break
+
+                    if not conflict:
+                        schedule.append({
+                            "subject": lesson["subject"],
+                            "teacher": lesson["teacher"],
+                            "group": lesson["group"],
+                            "room": room,
+                            "day": day,
+                            "time": time
+                        })
+                        placed = True
+                        break
+
+        if not placed:
+            unscheduled.append(lesson)
+
+    return schedule, unscheduled
+
+
+def show_schedule(schedule):
+    if not schedule:
+        print("\nРасписание пустое.")
+        return
+
+    print("\n========== УЧЕБНОЕ РАСПИСАНИЕ ==========")
+
+    for number, lesson in enumerate(schedule, start=1):
+        print(f"\nЗанятие №{number}")
+        print(f"Предмет:      {lesson['subject']}")
+        print(f"Преподаватель: {lesson['teacher']}")
+        print(f"Группа:       {lesson['group']}")
+        print(f"Аудитория:    {lesson['room']}")
+        print(f"День:         {lesson['day']}")
+        print(f"Время:        {lesson['time']}")
+
+    print("\n========================================")
+
+
+def check_conflicts(schedule):
+    conflicts = []
+
+    for i in range(len(schedule)):
+        for j in range(i + 1, len(schedule)):
+            first = schedule[i]
+            second = schedule[j]
+
+            same_slot = (
+                first["day"] == second["day"]
+                and first["time"] == second["time"]
+            )
+
+            if same_slot:
+                reasons = []
+
+                if first["room"] == second["room"]:
+                    reasons.append("аудитория занята")
+
+                if first["teacher"].lower() == second["teacher"].lower():
+                    reasons.append("преподаватель занят")
+
+                if first["group"].lower() == second["group"].lower():
+                    reasons.append("группа занята")
+
+                if reasons:
+                    conflicts.append(
+                        f"{first['subject']} и {second['subject']}: "
+                        + ", ".join(reasons)
+                    )
+
+    if conflicts:
+        print("\nНайдены конфликты:")
+        for conflict in conflicts:
+            print("-", conflict)
+    else:
+        print("\nКонфликтов не обнаружено.")
+
+
+def export_schedule(schedule):
+    try:
+        with open("schedule.txt", "w", encoding="utf-8") as file:
+            file.write("УЧЕБНОЕ РАСПИСАНИЕ\n\n")
+
+            for lesson in schedule:
+                file.write(
+                    f"{lesson['day']}, {lesson['time']}\n"
+                    f"Предмет: {lesson['subject']}\n"
+                    f"Преподаватель: {lesson['teacher']}\n"
+                    f"Группа: {lesson['group']}\n"
+                    f"Аудитория: {lesson['room']}\n\n"
+                )
+
+        print("Расписание сохранено в файл schedule.txt.")
+
+    except OSError as error:
+        print(f"Ошибка сохранения файла: {error}")
+
+
+def main():
+    print("ПЛАНИРОВЩИК УЧЕБНОГО РАСПИСАНИЯ")
+
+    rooms_input = input(
+        "\nВведите номера аудиторий через запятую "
+        "(например, 101, 102, 201): "
+    )
+
+    rooms = list(dict.fromkeys(
+        room.strip()
+        for room in rooms_input.split(",")
+        if room.strip()
+    ))
+
+    if not rooms:
+        print("Ошибка: необходимо указать хотя бы одну аудиторию.")
+        return
+
+    try:
+        count = int(input("Сколько занятий добавить? "))
+
+        if count < 1:
+            print("Количество занятий должно быть больше нуля.")
+            return
+
+    except ValueError:
+        print("Ошибка: введите целое число.")
+        return
+
+    lessons = []
+
+    for number in range(1, count + 1):
+        print(f"\nЗанятие №{number}")
+
+        subject = input("Название предмета: ").strip()
+        teacher = input("ФИО преподавателя: ").strip()
+        group = input("Название группы: ").strip()
+
+        if not subject or not teacher or not group:
+            print("Поля не должны быть пустыми. Повторите ввод.")
+            return
+
+        lessons.append({
+            "subject": subject,
+            "teacher": teacher,
+            "group": group
+        })
+
+    schedule, unscheduled = create_schedule(lessons, rooms)
+
+    show_schedule(schedule)
+    check_conflicts(schedule)
+
+    if unscheduled:
+        print("\nНе удалось разместить следующие занятия:")
+        for lesson in unscheduled:
+            print(f"- {lesson['subject']} ({lesson['group']})")
+
+    while True:
+        print("\n1 — Показать расписание")
+        print("2 — Проверить конфликты")
+        print("3 — Экспортировать в TXT")
+        print("0 — Выход")
+
+        choice = input("Выберите действие: ").strip()
+
+        if choice == "1":
+            show_schedule(schedule)
+        elif choice == "2":
+            check_conflicts(schedule)
+        elif choice == "3":
+            export_schedule(schedule)
+        elif choice == "0":
+            print("Работа программы завершена.")
+            break
+        else:
+            print("Неверный выбор. Попробуйте ещё раз.")
+
+
+if __name__ == "__main__":
+    main()
